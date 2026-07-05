@@ -1,4 +1,4 @@
-# KubeSense (TaskSphere)
+# KubeSense
 
 KubeSense is a modern, AI-powered Kubernetes observability and monitoring platform. It combines real-time cluster metrics, automated anomaly detection, predictive resource forecasting, and interactive topology maps into a single, intuitive interface. 
 
