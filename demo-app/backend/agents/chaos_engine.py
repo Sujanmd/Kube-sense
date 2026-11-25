@@ -189,7 +189,8 @@ def execute_pod_crash(target_service: str):
             config.load_kube_config()
             
         v1 = client.CoreV1Api()
-        pods = v1.list_namespaced_pod(namespace="tasksphere-app")
+        namespace = os.getenv("K8S_NAMESPACE", "kubesense")
+        pods = v1.list_namespaced_pod(namespace=namespace)
         
         target_pods = []
         for pod in pods.items:
@@ -204,8 +205,8 @@ def execute_pod_crash(target_service: str):
             return
             
         for pod_name in target_pods:
-            print(f"[ChaosEngine] Deleting pod '{pod_name}' in namespace 'tasksphere-app'...")
-            v1.delete_namespaced_pod(name=pod_name, namespace="tasksphere-app")
+            print(f"[ChaosEngine] Deleting pod '{pod_name}' in namespace '{namespace}'...")
+            v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
     except Exception as e:
         print(f"[ChaosEngine] Kubernetes error executing pod deletion: {e}")
 

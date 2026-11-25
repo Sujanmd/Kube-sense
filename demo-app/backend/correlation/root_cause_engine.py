@@ -148,7 +148,8 @@ async def run_rca_engine():
                 k8s_events = []
                 if k8s_api:
                     try:
-                        events_list = k8s_api.list_namespaced_event(namespace="tasksphere-app")
+                        k8s_ns = os.getenv("K8S_NAMESPACE", "kubesense")
+                        events_list = k8s_api.list_namespaced_event(namespace=k8s_ns)
                         for event in events_list.items:
                             last_ts = event.last_timestamp or event.event_time
                             if last_ts:

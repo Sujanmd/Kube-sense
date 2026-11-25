@@ -1,0 +1,29 @@
+================================================================================
+  KubeSense has been successfully installed!
+================================================================================
+
+1. Check the deployment status:
+   kubectl get pods -n {{ include "kubesense.namespace" . }} -l "app.kubernetes.io/managed-by={{ .Release.Service }}"
+
+2. Wait for all pods to become ready:
+   kubectl wait --for=condition=ready pod --all -n {{ include "kubesense.namespace" . }} --timeout=120s
+
+3. Access KubeSense Frontend:
+   {{- if eq .Values.frontend.service.type "NodePort" }}
+   Using Minikube service tunnel (Recommended):
+     minikube service {{ .Values.frontend.service.name }} -n {{ include "kubesense.namespace" . }}
+
+   Or via Port Forwarding:
+     kubectl port-forward svc/{{ .Values.frontend.service.name }} 8080:{{ .Values.frontend.service.port }} -n {{ include "kubesense.namespace" . }}
+     Then open: http://localhost:8080
+   {{- else if eq .Values.frontend.service.type "LoadBalancer" }}
+     export SERVICE_IP=$(kubectl get svc --namespace {{ include "kubesense.namespace" . }} {{ .Values.frontend.service.name }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+     echo http://$SERVICE_IP:{{ .Values.frontend.service.port }}
+   {{- else }}
+     kubectl port-forward svc/{{ .Values.frontend.service.name }} 8080:{{ .Values.frontend.service.port }} -n {{ include "kubesense.namespace" . }}
+     Then open: http://localhost:8080
+   {{- end }}
+
+4. Access Prometheus UI (optional):
+   kubectl port-forward svc/{{ .Values.prometheus.service.name }} 9090:9090 -n {{ include "kubesense.namespace" . }}
+   Then open: http://localhost:9090

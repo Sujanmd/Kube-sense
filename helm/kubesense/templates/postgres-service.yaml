@@ -1,0 +1,18 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.postgresql.service.name }}
+  namespace: {{ include "kubesense.namespace" . }}
+  labels:
+    {{- include "kubesense.labels" . | nindent 4 }}
+    app: postgres
+spec:
+  type: {{ .Values.postgresql.service.type }}
+  ports:
+    - port: {{ .Values.postgresql.service.port }}
+      targetPort: {{ .Values.postgresql.service.targetPort }}
+      name: postgres
+  selector:
+    app: postgres
+{{- end }}

@@ -1,10 +1,10 @@
 ================================================================================
-           KUBESENSE (TASKSPHERE) - SYSTEM DESIGN & CODEBASE DOCUMENTATION
+            KUBESENSE - SYSTEM DESIGN & CODEBASE DOCUMENTATION
 ================================================================================
 
 1. PROJECT OVERVIEW & GOAL
 --------------------------------------------------------------------------------
-KubeSense (also referred to as TaskSphere) is an advanced, AI-powered Kubernetes
+KubeSense is an advanced, AI-powered Kubernetes
 observability and monitoring platform designed to simplify container orchestration 
 management. It is built to monitor cluster performance, automatically discover 
 service topologies, identify bottlenecks, detect anomalies, predict future 
@@ -54,11 +54,12 @@ demo-app/
 │   ├── package.json     # Node.js configuration
 │   └── Dockerfile       # Frontend build and Nginx deployment container
 └── k8s/
-    ├── namespace.yaml   # Creates namespace 'tasksphere-app'
+    ├── namespace.yaml   # Creates namespace 'kubesense'
     ├── deployment.yaml  # Configures Postgres, Backend, and Frontend workloads
     ├── service.yaml     # Exposes services (ClusterIP/LoadBalancer ports)
     ├── rbac.yaml        # Access roles for API querying inside the cluster
     └── prometheus.yaml  # Configures Prometheus server for metrics aggregation
+(Note: Production deployments are managed via the unified Helm chart in helm/kubesense)
 
 --------------------------------------------------------------------------------
 3. BACKEND SYSTEM & CODEBASE ARCHITECTURE
@@ -71,9 +72,9 @@ Database Layer (database/db.py):
 * Uses SQLAlchemy ORM to manage state.
 * Dual-Adapter Database Engine: Built to operate seamlessly across environments:
   - Attempt 1: Automatically attempts to connect to the PostgreSQL instance 
-    (postgres-service:5432/tasksphere) inside the Kubernetes cluster.
+    (postgres-service:5432/kubesense) inside the Kubernetes cluster.
   - Attempt 2: If PostgreSQL is unreachable or connection credentials fail, it 
-    silently falls back to a local SQLite database (`tasksphere.db`) in the CWD.
+    silently falls back to a local SQLite database (`kubesense.db`) in the CWD.
 * On startup (`main.py`), it runs DDL commands (`create_all()`) to automatically 
   create the database tables. No manual database setup or setup commands are required.
 
@@ -106,7 +107,7 @@ A. CPU, Storage, and Network Agents (agents/):
 B. Dependency Mapper (agents/dependency_mapper.py):
 * Discovery Mechanism: 
   - Uses the `kubernetes` Python client to query the API server for all services 
-    and pods in the `tasksphere-app` namespace.
+    and pods in the `kubesense` namespace.
   - Inspects container environment variables to check for references to other 
     services (e.g., checking if the backend pod contains `POSTGRES_HOST`).
   - Calls Prometheus to fetch network communication metrics (receive/transmit bytes).
@@ -167,12 +168,12 @@ Key Features:
 --------------------------------------------------------------------------------
 6. KUBERNETES DEPLOYMENT & NETWORKING INFRASTRUCTURE
 --------------------------------------------------------------------------------
-All components are deployed under the namespace `tasksphere-app`:
+All components are deployed under the namespace `kubesense`:
 
 A. Workload Deployment:
 * postgres-deployment: Runs `postgres:15-alpine`. Mounts the PVC `postgres-pvc` 
   to `/var/lib/postgresql/data` for persistent SQL database state.
-* backend-deployment: Runs `tasksphere-backend:latest`. Connects to postgres 
+* backend-deployment: Runs `kubesense-backend:latest`. Connects to postgres 
   utilizing ConfigMap configurations and secret credentials.
 * frontend-deployment: Runs `kubesense-frontend:latest`.
 
@@ -199,10 +200,10 @@ C. Prometheus server (k8s/prometheus.yaml):
 Deploying the stack to Minikube:
 1. Ensure Docker Desktop is active.
 2. Start Minikube: `minikube start --driver=docker`
-3. Build the backend image: `docker build -t tasksphere-backend:latest ./demo-app/backend`
+3. Build the backend image: `docker build -t kubesense-backend:latest ./demo-app/backend`
 4. Build the frontend image: `docker build -t kubesense-frontend:latest ./demo-app/frontend`
 5. Load images to Minikube registry:
-   - `minikube image load tasksphere-backend:latest`
+   - `minikube image load kubesense-backend:latest`
    - `minikube image load kubesense-frontend:latest`
 6. Apply manifests:
    `kubectl apply -f demo-app/k8s/namespace.yaml`
@@ -211,6 +212,6 @@ Deploying the stack to Minikube:
    `kubectl apply -f demo-app/k8s/rbac.yaml`
    `kubectl apply -f demo-app/k8s/prometheus.yaml`
 7. Port-forward the frontend:
-   `kubectl port-forward svc/frontend-service 8080:80 -n tasksphere-app`
+   `kubectl port-forward svc/frontend-service 8080:80 -n kubesense`
 8. Open the web interface at: `http://localhost:8080`
 ================================================================================

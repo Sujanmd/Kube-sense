@@ -1,0 +1,19 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.prometheus.service.name }}
+  namespace: {{ include "kubesense.namespace" . }}
+  labels:
+    {{- include "kubesense.labels" . | nindent 4 }}
+    app: prometheus
+spec:
+  type: {{ .Values.prometheus.service.type }}
+  ports:
+    - port: {{ .Values.prometheus.service.port }}
+      targetPort: {{ .Values.prometheus.service.targetPort }}
+      protocol: TCP
+      name: web
+  selector:
+    app: prometheus
+{{- end }}

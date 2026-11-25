@@ -9,7 +9,7 @@ DB_USER = os.getenv("POSTGRES_USER", "postgres")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "postgres")
 DB_HOST = os.getenv("POSTGRES_HOST", "postgres-service")
 DB_PORT = os.getenv("POSTGRES_PORT", "5432")
-DB_NAME = os.getenv("POSTGRES_DB", "tasksphere")
+DB_NAME = os.getenv("POSTGRES_DB", "kubesense")
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
@@ -36,8 +36,8 @@ def init_db():
                 time.sleep(1)
                 
     if not connected:
-        print("Could not connect to PostgreSQL. Falling back to local SQLite database (tasksphere.db)...")
-        sqlite_url = "sqlite:///tasksphere.db"
+        print("Could not connect to PostgreSQL. Falling back to local SQLite database (kubesense.db)...")
+        sqlite_url = "sqlite:///kubesense.db"
         engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
             
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

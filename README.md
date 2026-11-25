@@ -80,12 +80,14 @@ Kube-sense/
 │   │   ├── Dockerfile         # Multi-stage Nginx build container
 │   │   ├── nginx.conf         # Container reverse proxy & WebSocket configuration
 │   │   └── package.json       # Node.js dependencies and build scripts
-│   └── k8s/                   # Kubernetes deployment configurations
-│       ├── namespace.yaml     # tasksphere-app namespace definition
+│   └── k8s/                   # Raw Kubernetes manifests (alternative deployment)
+│       ├── namespace.yaml     # kubesense namespace definition
 │       ├── rbac.yaml          # ClusterRole & ServiceAccount permissions
 │       ├── prometheus.yaml    # In-cluster Prometheus deployment & scraping rules
 │       ├── deployment.yaml    # Postgres, Backend, and Frontend workloads
 │       └── service.yaml       # Service port bindings and NodePort definitions
+├── helm/                      # Production Helm chart
+│   └── kubesense/             # Structured Helm chart templates & values.yaml
 ├── docs/                      # Architectural specs, images, & verification guides
 ├── start.ps1                  # One-click startup automation script for Windows/Minikube
 └── .gitignore                 # Configured git exclusions for clean commits
@@ -97,7 +99,7 @@ Kube-sense/
 
 You can run KubeSense in two different modes:
 
-1. **Option 1: Local Standalone Mode (Zero-Config)**: Runs directly on your machine. Telemetry and anomalies are automatically simulated, and the database seamlessly falls back to a local SQLite database (`tasksphere.db`). No Minikube or PostgreSQL setup required.
+1. **Option 1: Local Standalone Mode (Zero-Config)**: Runs directly on your machine. Telemetry and anomalies are automatically simulated, and the database seamlessly falls back to a local SQLite database (`kubesense.db`). No Minikube or PostgreSQL setup required.
 2. **Option 2: Kubernetes Cluster Mode (Minikube)**: Runs inside a Kubernetes cluster, aggregating live cluster telemetry via Prometheus and persisting data in PostgreSQL.
 
 ---
@@ -127,7 +129,7 @@ pip install -r requirements.txt
 # Run backend development server
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
-> **Note**: In standalone mode, the backend automatically initializes a local SQLite file (`tasksphere.db`) and starts simulation workers.
+> **Note**: In standalone mode, the backend automatically initializes a local SQLite file (`kubesense.db`) and starts simulation workers.
 
 #### 2. Start Frontend
 ```bash
@@ -144,62 +146,94 @@ Open your browser at `http://localhost:5173`.
 
 ---
 
-### Option 2: Kubernetes Cluster Mode (Minikube)
+### Option 2: Kubernetes Cluster Mode (K3s / Minikube via Helm)
 
 #### Prerequisites
-* [Minikube](https://minikube.sigs.k8s.io/docs/start/)
-* [Kubectl](https://kubernetes.io/docs/tasks/tools/)
-* [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+* [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/) (running)
+* [k3d](https://k3d.io/) (K3s in Docker) or [Minikube](https://minikube.sigs.k8s.io/docs/start/)
+* [Helm](https://helm.sh/docs/intro/install/) (v3+)
+* [Ollama](https://ollama.com/) (Optional, for local AI SRE recommendations)
 
-#### Quick Start (Windows PowerShell)
-Run the automated startup script from the root directory:
+#### 🚀 Quick Start (Automated Windows PowerShell)
+Run the automated launcher from the repository root:
 ```powershell
 .\start.ps1
 ```
+> **What `start.ps1` does automatically:**
+> 1. Verifies Docker Desktop is running (launches it if stopped).
+> 2. Auto-detects and installs `k3d`, `helm`, and `kubectl` if missing.
+> 3. Configures & launches **Ollama** with `OLLAMA_HOST=0.0.0.0` and ensures `llama3.1` is pulled.
+> 4. Spins up a **K3s cluster** (`kubesense-cluster`) with port `30080` mapped directly to your host.
+> 5. Builds `kubesense-backend` and `kubesense-frontend` images and imports them into K3s.
+> 6. Deploys the stack with a single Helm command and waits for pods to be ready.
+> 7. Automatically launches your browser at `http://localhost:30080`!
 
-#### Manual Deployment (Cross-Platform)
+*(To run with Minikube instead of K3s: `.\start.ps1 -Driver minikube`)*
 
-1. **Start Minikube**:
-   ```bash
-   minikube start --driver=docker
+---
+
+#### 🛠️ Manual Deployment on K3s (Windows via `k3d`)
+
+If you prefer running the commands step-by-step:
+
+1. **Install k3d & Helm** (via PowerShell or winget):
+   ```powershell
+   winget install Rancher.k3d
+   winget install Helm.Helm
    ```
 
-2. **Build and Load Docker Images**:
-   ```bash
-   # Build Backend image
-   docker build -t tasksphere-backend:latest demo-app/backend/
+2. **Configure Ollama for Kubernetes Pod Access**:
+   Set `OLLAMA_HOST` so pods in K3s can reach Ollama on port 11434:
+   ```powershell
+   $env:OLLAMA_HOST = "0.0.0.0"
+   ollama serve
+   # In another window, ensure the model is ready:
+   ollama pull llama3.1
+   ```
 
-   # Build Frontend image
+3. **Create K3s Cluster with Port Mapping**:
+   ```bash
+   k3d cluster create kubesense-cluster \
+     -p "30080:30080@server:0" \
+     -p "30800:30800@server:0" \
+     --wait
+   ```
+
+4. **Build and Import Docker Images**:
+   ```bash
+   # Build images locally
+   docker build -t kubesense-backend:latest demo-app/backend/
    docker build -t kubesense-frontend:latest demo-app/frontend/
 
-   # Load images into Minikube
-   minikube image load tasksphere-backend:latest
-   minikube image load kubesense-frontend:latest
+   # Import directly into K3s containerd
+   k3d image import kubesense-backend:latest kubesense-frontend:latest -c kubesense-cluster
    ```
 
-3. **Apply Kubernetes Manifests**:
+5. **Deploy with a Single Helm Command**:
    ```bash
-   kubectl apply -f demo-app/k8s/namespace.yaml
-   kubectl apply -f demo-app/k8s/rbac.yaml
-   kubectl apply -f demo-app/k8s/prometheus.yaml
-   kubectl apply -f demo-app/k8s/deployment.yaml
-   kubectl apply -f demo-app/k8s/service.yaml
+   helm install kubesense ./helm/kubesense \
+     --namespace kubesense \
+     --create-namespace \
+     --set backend.env.ollamaUrl="http://host.k3d.internal:11434"
    ```
 
-4. **Verify Pod Status**:
-   ```bash
-   kubectl get pods -n tasksphere-app
+6. **Access the Application**:
+   Open your browser directly at:
+   ```text
+   http://localhost:30080
    ```
+   *(No background port-forward or service tunnel required on K3s — port 30080 is mapped directly to your localhost).*
 
-5. **Expose & Access the Application**:
-   ```bash
-   # Method A: Port-forward frontend service
-   kubectl port-forward svc/frontend-service 8080:80 -n tasksphere-app
+---
 
-   # Method B: Minikube service command
-   minikube service frontend-service -n tasksphere-app
-   ```
-   Access the dashboard in your browser at `http://localhost:8080`.
+#### Alternative: Minikube Deployment
+```bash
+minikube start --driver=docker
+minikube image load kubesense-backend:latest
+minikube image load kubesense-frontend:latest
+helm install kubesense ./helm/kubesense --namespace kubesense --create-namespace
+minikube service frontend-service -n kubesense
+```
 
 ---
 
@@ -211,7 +245,7 @@ The backend supports configuration via environment variables:
 | :--- | :--- | :--- |
 | `POSTGRES_HOST` | `postgres-service` | PostgreSQL host (falls back to SQLite if unreachable) |
 | `POSTGRES_PORT` | `5432` | PostgreSQL database port |
-| `POSTGRES_DB` | `tasksphere` | PostgreSQL database name |
+| `POSTGRES_DB` | `kubesense` | PostgreSQL database name |
 | `POSTGRES_USER` | `postgres` | Database user |
 | `POSTGRES_PASSWORD` | `postgres` | Database password |
 | `PROMETHEUS_URL` | `http://prometheus:9090` | In-cluster Prometheus scraping endpoint |

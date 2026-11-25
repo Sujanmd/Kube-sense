@@ -344,8 +344,9 @@ class PrometheusService:
             return summary
 
     async def get_pvc_metrics(self):
-        used_query = 'kubelet_volume_stats_used_bytes{namespace="tasksphere-app"}'
-        capacity_query = 'kubelet_volume_stats_capacity_bytes{namespace="tasksphere-app"}'
+        namespace = os.getenv("K8S_NAMESPACE", "kubesense")
+        used_query = f'kubelet_volume_stats_used_bytes{{namespace="{namespace}"}}'
+        capacity_query = f'kubelet_volume_stats_capacity_bytes{{namespace="{namespace}"}}'
         
         async with httpx.AsyncClient() as client:
             try:
@@ -437,10 +438,11 @@ class PrometheusService:
             return list(pvc_metrics.values())
 
     async def get_network_metrics(self):
-        rx_bytes_query = 'sum(rate(container_network_receive_bytes_total{namespace="tasksphere-app"}[5m])) by (pod)'
-        tx_bytes_query = 'sum(rate(container_network_transmit_bytes_total{namespace="tasksphere-app"}[5m])) by (pod)'
-        rx_dropped_query = 'sum(rate(container_network_receive_packets_dropped_total{namespace="tasksphere-app"}[5m])) by (pod)'
-        rx_errors_query = 'sum(rate(container_network_receive_errors_total{namespace="tasksphere-app"}[5m])) by (pod)'
+        namespace = os.getenv("K8S_NAMESPACE", "kubesense")
+        rx_bytes_query = f'sum(rate(container_network_receive_bytes_total{{namespace="{namespace}"}}[5m])) by (pod)'
+        tx_bytes_query = f'sum(rate(container_network_transmit_bytes_total{{namespace="{namespace}"}}[5m])) by (pod)'
+        rx_dropped_query = f'sum(rate(container_network_receive_packets_dropped_total{{namespace="{namespace}"}}[5m])) by (pod)'
+        rx_errors_query = f'sum(rate(container_network_receive_errors_total{{namespace="{namespace}"}}[5m])) by (pod)'
         
         async with httpx.AsyncClient() as client:
             try:

@@ -38,8 +38,9 @@ async def run_dependency_mapper():
     
     while True:
         try:
-            services = v1.list_namespaced_service(namespace="tasksphere-app")
-            pods = v1.list_namespaced_pod(namespace="tasksphere-app")
+            k8s_ns = os.getenv("K8S_NAMESPACE", "kubesense")
+            services = v1.list_namespaced_service(namespace=k8s_ns)
+            pods = v1.list_namespaced_pod(namespace=k8s_ns)
             
             nodes_map = {}
             for svc in services.items:

@@ -124,10 +124,11 @@ You must respond with a JSON object containing exactly these keys: "explanation"
 
     candidate_urls = [
         os.getenv("OLLAMA_URL", ""),
-        "http://172.16.128.157:11434",
-        "http://172.31.192.1:11434",
+        "http://host.k3d.internal:11434",
         "http://host.minikube.internal:11434",
         "http://host.docker.internal:11434",
+        "http://172.16.128.157:11434",
+        "http://172.31.192.1:11434",
         "http://localhost:11434"
     ]
     candidate_urls = list(dict.fromkeys([u for u in candidate_urls if u]))

@@ -27,7 +27,7 @@ from models.chaos_event import DBChaosEvent
 from models.metric_history import DBMetricHistory
 
 # Initialize FastAPI App
-app = FastAPI(title="TaskSphere API", version="1.0.0")
+app = FastAPI(title="KubeSense API", version="1.0.0")
 
 # Enable CORS
 app.add_middleware(
@@ -94,7 +94,7 @@ async def get_root_cpu_metrics():
 async def read_root():
     return {
         "status": "healthy",
-        "app": "TaskSphere Backend API (Modular)",
+        "app": "KubeSense Backend API (Modular)",
         "database": "PostgreSQL Initialized"
     }
 

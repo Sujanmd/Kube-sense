@@ -2,9 +2,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: app-config
-  namespace: tasksphere-app
+  namespace: kubesense
 data:
-  POSTGRES_DB: "tasksphere"
+  POSTGRES_DB: "kubesense"
   POSTGRES_USER: "postgres"
   POSTGRES_HOST: "postgres-service"
   POSTGRES_PORT: "5432"
@@ -13,16 +13,16 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: postgres-secret
-  namespace: tasksphere-app
+  namespace: kubesense
 type: Opaque
 stringData:
-  POSTGRES_PASSWORD: "tasksphere_secure_pass"
+  POSTGRES_PASSWORD: "kubesense_secure_pass"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgres-pvc
-  namespace: tasksphere-app
+  namespace: kubesense
 spec:
   accessModes:
     - ReadWriteOnce
@@ -35,7 +35,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres-deployment
-  namespace: tasksphere-app
+  namespace: kubesense
   labels:
     app: postgres
 spec:
@@ -84,7 +84,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend-deployment
-  namespace: tasksphere-app
+  namespace: kubesense
   labels:
     app: backend
 spec:
@@ -102,9 +102,10 @@ spec:
         - ip: "192.168.49.1"
           hostnames:
             - "host.minikube.internal"
+            - "host.k3d.internal"
       containers:
         - name: backend
-          image: tasksphere-backend:latest
+          image: kubesense-backend:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
@@ -137,6 +138,10 @@ spec:
                   key: POSTGRES_PASSWORD
             - name: OLLAMA_URL
               value: "http://host.minikube.internal:11434"
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           readinessProbe:
             httpGet:
               path: /
@@ -159,7 +164,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-deployment
-  namespace: tasksphere-app
+  namespace: kubesense
   labels:
     app: frontend
 spec:

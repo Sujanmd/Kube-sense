@@ -1,0 +1,45 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-deployment
+  namespace: {{ include "kubesense.namespace" . }}
+  labels:
+    {{- include "kubesense.labels" . | nindent 4 }}
+    app: prometheus
+spec:
+  replicas: {{ .Values.prometheus.replicaCount }}
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        {{- include "kubesense.labels" . | nindent 8 }}
+        app: prometheus
+    spec:
+      serviceAccountName: {{ .Values.prometheus.serviceAccount.name }}
+      containers:
+        - name: prometheus
+          image: "{{ .Values.prometheus.image.repository }}:{{ .Values.prometheus.image.tag }}"
+          imagePullPolicy: {{ .Values.prometheus.image.pullPolicy }}
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+          ports:
+            - containerPort: {{ .Values.prometheus.service.port }}
+              name: web
+          resources:
+            {{- toYaml .Values.prometheus.resources | nindent 12 }}
+          volumeMounts:
+            - name: prometheus-config-volume
+              mountPath: /etc/prometheus/
+            - name: prometheus-storage-volume
+              mountPath: /prometheus/
+      volumes:
+        - name: prometheus-config-volume
+          configMap:
+            name: prometheus-server-conf
+        - name: prometheus-storage-volume
+          emptyDir: {}
+{{- end }}
